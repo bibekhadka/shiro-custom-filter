@@ -13,7 +13,6 @@ import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.apache.shiro.realm.Realm;
 import org.apache.shiro.realm.text.PropertiesRealm;
-import org.apache.shiro.realm.text.TextConfigurationRealm;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.spring.web.config.DefaultShiroFilterChainDefinition;
 import org.apache.shiro.spring.web.config.ShiroFilterChainDefinition;
@@ -22,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -79,7 +79,15 @@ public class SpringBootApp {
     public Filter jwtv() {
         return new JWTVerifyingFilter();
     }
-    
+
+    @Bean
+    public FilterRegistrationBean jwtvFilterRegBean() {
+        FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean();
+        filterRegistrationBean.setFilter(jwtv());
+        filterRegistrationBean.setEnabled(false);
+        return filterRegistrationBean;
+    }
+
     @Bean
     public ShiroFilterFactoryBean shiroFilterFactoryBean(@Value("#{ @environment['shiro.loginUrl'] ?: '/login.jsp' }") String loginUrl,
             @Value("#{ @environment['shiro.successUrl'] ?: '/' }") String successUrl,
@@ -104,7 +112,9 @@ public class SpringBootApp {
     @Bean
     public ShiroFilterChainDefinition shiroFilterChainDefinition() {
         DefaultShiroFilterChainDefinition chainDefinition = new DefaultShiroFilterChainDefinition();
-        chainDefinition.addPathDefinition("/**", "jwtv");
+        chainDefinition.addPathDefinition("/**", "authcBasic[permissive]");
+        chainDefinition.addPathDefinition("/api/**", "jwtv");
+        chainDefinition.addPathDefinition("/api/token", "anon");
         chainDefinition.addPathDefinition("/test/**", "anon");
         return chainDefinition;
     }
